@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DevOps System Monitor</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #00f2ff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .dashboard {
+            background: #161b22;
+            padding: 40px;
+            border: 2px solid #00f2ff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+            width: 400px;
+            text-align: center;
+        }
+        h1 { margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        .info { color: #8b949e; margin-bottom: 30px; font-size: 0.9em; }
+        
+        /* Прогресс бар стилі */
+        .metric { margin: 20px 0; text-align: left; }
+        .label { display: flex; justify-content: space-between; margin-bottom: 5px; color: #fff; }
+        .bar-container {
+            background: #30363d;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00f2ff, #0051ff);
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        .metric.danger .bar { background: linear-gradient(90deg, #ff9a00, #ff0000); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <h1>System Monitor</h1>
+        <div class="info">
+            Server ID: <span style="color: #fff">{{ hostname }}</span><br>
+            Status: <span style="color: #00ff00">ONLINE ●</span>
+        </div>
+
+        <div class="metric">
+            <div class="label"><span>CPU Load</span> <span id="cpu-val">0%</span></div>
+            <div class="bar-container">
+                <div class="bar" id="cpu-bar"></div>
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="label"><span>RAM Usage</span> <span id="ram-val">0%</span></div>
+            <div class="bar-container">
+                <div class="bar" id="ram-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Бұл скрипт секунд сайын серверден мәлімет алып отырады
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                // CPU жаңарту
+                document.getElementById('cpu-val').innerText = data.cpu + '%';
+                document.getElementById('cpu-bar').style.width = data.cpu + '%';
+
+                // RAM жаңарту
+                document.getElementById('ram-val').innerText = data.ram + '%';
+                document.getElementById('ram-bar').style.width = data.ram + '%';
+
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        // Әр 2 секунд сайын жаңартып тұр
+        setInterval(updateStats, 2000);
+        updateStats(); 
+    </script>
+</body>
+</html>
