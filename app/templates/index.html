@@ -66,6 +66,22 @@
                 <div class="bar" id="ram-bar"></div>
             </div>
         </div>
+        <div class="metric">
+            <div class="label"><span>Disk Usage</span> <span id="disk-val">0%</span></div>
+            <div class="bar-container">
+                <div class="bar" id="disk-bar" style="background: linear-gradient(90deg, #d900ff, #ff00cc);"></div>
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="label" style="border-top: 1px solid #30363d; padding-top: 10px; margin-top: 20px;">
+                <span>📡 Network Traffic:</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: #00f2ff;">
+                <span>⬇ Download: <b id="net-recv">0</b> MB</span>
+                <span>⬆ Upload: <b id="net-sent">0</b> MB</span>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -82,6 +98,14 @@
                 // RAM жаңарту
                 document.getElementById('ram-val').innerText = data.ram + '%';
                 document.getElementById('ram-bar').style.width = data.ram + '%';
+
+                // Disk жаңарту
+                document.getElementById('disk-val').innerText = data.disk + '%';
+                document.getElementById('disk-bar').style.width = data.disk + '%';
+
+                // Network жаңарту
+                document.getElementById('net-recv').innerText = data.net_recv;
+                document.getElementById('net-sent').innerText = data.net_sent;
 
             } catch (error) {
                 console.error('Error fetching stats:', error);
