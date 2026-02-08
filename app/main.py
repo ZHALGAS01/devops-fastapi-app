@@ -22,14 +22,21 @@ templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # Хабарлама жіберетін функция
 def send_telegram_alert(message):
+    # Терминалға жазамыз: "Жіберіп жатырмын..."
+    print(f"🚀 ATTEMPTING TO SEND ALERT: {message}")
+    
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
         try:
-            requests.post(url, data=data, timeout=5)
-        except:
-            pass
-
+            response = requests.post(url, data=data, timeout=5)
+            # Telegram жауабын шығарамыз
+            print(f"✅ Telegram Response: {response.status_code} - {response.text}")
+        except Exception as e:
+            # Қате болса, оны көрсетеміз
+            print(f"❌ Telegram Error: {e}")
+    else:
+        print("⚠️ Token or Chat ID missing in code!")
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     try:
