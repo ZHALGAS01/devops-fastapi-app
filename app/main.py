@@ -4,48 +4,70 @@ from fastapi.responses import HTMLResponse
 import socket
 import psutil
 import os
-import redis # Redis кітапханасы
+import redis
+import requests  # Жаңа кітапхана
 
 app = FastAPI()
 
-# Redis-пен байланыс орнатамыз
-# "redis" деген сөз - docker-compose ішіндегі сервистің аты
-r = redis.Redis(host='redis', port=6379, decode_responses=True)
+# Айнымалыларды оқып аламыз
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+# Redis қосу
+r = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
+# Хабарлама жіберетін функция
+def send_telegram_alert(message):
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+        try:
+            requests.post(url, data=data, timeout=5)
+        except:
+            pass
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    # Әр кірген сайын санды 1-ге көбейтеміз
-    hits = r.incr('page_views')
-    
+    try:
+        hits = r.incr('page_views')
+    except:
+        hits = "Redis Error"
+        
     return templates.TemplateResponse("index.html", {
         "request": request,
         "hostname": socket.gethostname(),
-        "hits": hits # HTML-ге жібереміз
+        "hits": hits
     })
 
 @app.get("/api/stats")
 async def get_stats():
-    # 1. Жалпы CPU & RAM
+    # Деректерді жинау
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
     
-    # 2. ЖЕКЕ ЯДРОЛАР (Core 1, Core 2...)
-    # Бұл тізім қайтарады: [10.2, 5.5, 20.1, ...]
     cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
-
-    # 3. NETWORK (Connections)
+    
     net = psutil.net_io_counters()
     sent_mb = round(net.bytes_sent / (1024 * 1024), 2)
     recv_mb = round(net.bytes_recv / (1024 * 1024), 2)
     
-    # Порттар мен байланыстарды санау
     connections = psutil.net_connections()
     active_conns = len([c for c in connections if c.status == 'ESTABLISHED'])
     listening_ports = [c.laddr.port for c in connections if c.status == 'LISTEN']
+
+    # --- ТЕКСЕРУ ЖӘНЕ ДАБЫЛ ҚАҒУ ---
+    # Егер CPU 80%-дан асса (тексеру үшін 10% қойсаң да болады)
+    if cpu > 50: 
+        send_telegram_alert(f"🚨 ALERT! High CPU Usage: {cpu}% on Server")
+
+    if ram > 80:
+        send_telegram_alert(f"⚠️ Warning! RAM is getting full: {ram}%")
+    # -------------------------------
 
     return {
         "cpu": cpu,
@@ -53,7 +75,7 @@ async def get_stats():
         "disk": disk,
         "net_sent": sent_mb,
         "net_recv": recv_mb,
-        "cores": cpu_cores,          # Жаңа: Ядролар
-        "active_conns": active_conns, # Жаңа: Белсенді байланыстар
-        "open_ports": listening_ports[:5] # Жаңа: Ашық порттар (топ-5)
+        "cores": cpu_cores,
+        "active_conns": active_conns,
+        "open_ports": listening_ports[:5]
     }

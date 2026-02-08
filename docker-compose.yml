@@ -8,9 +8,15 @@ services:
       - "8000:8000"
     restart: always
     depends_on:
-      - redis  # App Redis-ті күтеді
+      - redis
+
+    env_file:
+      - .env
+
     environment:
       - REDIS_HOST=redis
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 
   redis:
     image: redis:alpine
