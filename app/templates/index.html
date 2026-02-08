@@ -86,6 +86,22 @@
                 <span>⬆ Upload: <b id="net-sent">0</b> MB</span>
             </div>
         </div>
+        <div class="metric">
+            <div class="label" style="margin-top: 15px; color: #00ff9d;">
+                🔗 Active Connections: <span id="conn-val">0</span>
+            </div>
+            <div style="font-size: 0.8em; color: #888;">
+                Open Ports: <span id="ports-val">Loading...</span>
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="label" style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
+                🧩 CPU Cores
+            </div>
+            <div id="cores-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                </div>
+        </div>
     </div>
 
     <script>
@@ -110,6 +126,29 @@
                 // Network жаңарту
                 document.getElementById('net-recv').innerText = data.net_recv;
                 document.getElementById('net-sent').innerText = data.net_sent;
+
+                // Connections жаңарту
+                document.getElementById('conn-val').innerText = data.active_conns;
+                document.getElementById('ports-val').innerText = data.open_ports.join(', ');
+
+                // Ядроларды (Cores) салу
+                const coresContainer = document.getElementById('cores-container');
+                coresContainer.innerHTML = ''; // Тазалау
+                
+                data.cores.forEach((coreUsage, index) => {
+                    const coreHTML = `
+                        <div style="margin-bottom: 5px;">
+                            <div style="font-size: 0.7em; display: flex; justify-content: space-between;">
+                                <span>Core ${index + 1}</span>
+                                <span>${coreUsage}%</span>
+                            </div>
+                            <div class="bar-container" style="height: 6px;">
+                                <div class="bar" style="width: ${coreUsage}%; background: #00e5ff;"></div>
+                            </div>
+                        </div>
+                    `;
+                    coresContainer.innerHTML += coreHTML;
+                });
 
             } catch (error) {
                 console.error('Error fetching stats:', error);

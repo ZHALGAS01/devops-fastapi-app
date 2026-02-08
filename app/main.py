@@ -28,14 +28,32 @@ async def read_root(request: Request):
 
 @app.get("/api/stats")
 async def get_stats():
+    # 1. Жалпы CPU & RAM
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
+    
+    # 2. ЖЕКЕ ЯДРОЛАР (Core 1, Core 2...)
+    # Бұл тізім қайтарады: [10.2, 5.5, 20.1, ...]
+    cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
+
+    # 3. NETWORK (Connections)
     net = psutil.net_io_counters()
     sent_mb = round(net.bytes_sent / (1024 * 1024), 2)
     recv_mb = round(net.bytes_recv / (1024 * 1024), 2)
+    
+    # Порттар мен байланыстарды санау
+    connections = psutil.net_connections()
+    active_conns = len([c for c in connections if c.status == 'ESTABLISHED'])
+    listening_ports = [c.laddr.port for c in connections if c.status == 'LISTEN']
 
     return {
-        "cpu": cpu, "ram": ram, "disk": disk,
-        "net_sent": sent_mb, "net_recv": recv_mb
+        "cpu": cpu,
+        "ram": ram,
+        "disk": disk,
+        "net_sent": sent_mb,
+        "net_recv": recv_mb,
+        "cores": cpu_cores,          # Жаңа: Ядролар
+        "active_conns": active_conns, # Жаңа: Белсенді байланыстар
+        "open_ports": listening_ports[:5] # Жаңа: Ашық порттар (топ-5)
     }
