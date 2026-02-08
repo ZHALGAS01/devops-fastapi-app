@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  app:
+    image: zhak01/devops-fastapi-app:latest
+    container_name: monitoring-dashboard
+    ports:
+      - "8000:8000"
+    restart: always
