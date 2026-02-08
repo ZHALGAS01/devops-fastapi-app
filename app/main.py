@@ -5,7 +5,8 @@ import socket
 import psutil
 import os
 import redis
-import requests  # Жаңа кітапхана
+import requests
+import time  # <--- Жаңа кітапхана: Уақытты санау үшін
 
 app = FastAPI()
 
@@ -15,34 +16,49 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Redis қосу
-r = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
+try:
+    r = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
+except:
+    r = None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
-# Хабарлама жіберетін функция
+# --- 🧠 БОТТЫҢ ЕСТЕЛІГІ (ЖАҢА) ---
+last_alert_time = 0   # Соңғы хабарлама жіберген уақыт
+ALERT_COOLDOWN = 60   # Қанша секунд үзіліс алу керек (1 минут)
+
 def send_telegram_alert(message):
-    # Терминалға жазамыз: "Жіберіп жатырмын..."
-    print(f"🚀 ATTEMPTING TO SEND ALERT: {message}")
+    global last_alert_time  # Ғаламдық айнымалыны қолданамыз
+    
+    current_time = time.time()
+    
+    # Егер соңғы хабарламадан бері 60 секунд өтпесе -> Жібермейміз!
+    if (current_time - last_alert_time) < ALERT_COOLDOWN:
+        print(f"⏳ Cooling down... Skipping alert. (Wait {int(ALERT_COOLDOWN - (current_time - last_alert_time))}s)")
+        return  # Функция осы жерден тоқтайды
+
+    # Егер уақыт өтіп кетсе -> Жібереміз
+    print(f"🚀 SENDING ALERT: {message}")
     
     if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
         try:
-            response = requests.post(url, data=data, timeout=5)
-            # Telegram жауабын шығарамыз
-            print(f"✅ Telegram Response: {response.status_code} - {response.text}")
+            requests.post(url, data=data, timeout=5)
+            # Уақытты жаңартамыз: "Мен дәл қазір жібердім"
+            last_alert_time = current_time 
         except Exception as e:
-            # Қате болса, оны көрсетеміз
             print(f"❌ Telegram Error: {e}")
-    else:
-        print("⚠️ Token or Chat ID missing in code!")
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    try:
-        hits = r.incr('page_views')
-    except:
-        hits = "Redis Error"
+    hits = "Error"
+    if r:
+        try:
+            hits = r.incr('page_views')
+        except:
+            hits = "Redis Error"
         
     return templates.TemplateResponse("index.html", {
         "request": request,
@@ -52,11 +68,9 @@ async def read_root(request: Request):
 
 @app.get("/api/stats")
 async def get_stats():
-    # Деректерді жинау
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
-    
     cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
     
     net = psutil.net_io_counters()
@@ -67,14 +81,9 @@ async def get_stats():
     active_conns = len([c for c in connections if c.status == 'ESTABLISHED'])
     listening_ports = [c.laddr.port for c in connections if c.status == 'LISTEN']
 
-    # --- ТЕКСЕРУ ЖӘНЕ ДАБЫЛ ҚАҒУ ---
-    # Егер CPU 80%-дан асса (тексеру үшін 10% қойсаң да болады)
+    # Логика: Егер CPU 50%-дан асса
     if cpu > 50: 
         send_telegram_alert(f"🚨 ALERT! High CPU Usage: {cpu}% on Server")
-
-    if ram > 80:
-        send_telegram_alert(f"⚠️ Warning! RAM is getting full: {ram}%")
-    # -------------------------------
 
     return {
         "cpu": cpu,
