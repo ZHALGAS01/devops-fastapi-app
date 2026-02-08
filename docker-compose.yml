@@ -7,3 +7,12 @@ services:
     ports:
       - "8000:8000"
     restart: always
+    depends_on:
+      - redis  # App Redis-ті күтеді
+    environment:
+      - REDIS_HOST=redis
+
+  redis:
+    image: redis:alpine
+    container_name: my-redis-db
+    restart: always
