@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>DevOps System Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background-color: #0d1117;
@@ -102,9 +103,43 @@
             <div id="cores-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 </div>
         </div>
+        <div class="metric" style="margin-top: 20px;">
+            <div class="label" style="border-top: 1px solid #333; padding-top: 10px;">
+                📈 CPU History (Last 60 seconds)
+            </div>
+            <div style="height: 200px;">
+                <canvas id="cpuChart"></canvas>
+            </div>
+        </div>
     </div>
 
     <script>
+        const ctx = document.getElementById('cpuChart').getContext('2d');
+    const cpuChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(20).fill(''), 
+            datasets: [{
+                label: 'CPU Load %',
+                data: Array(20).fill(0),
+                borderColor: '#00ff9d',
+                backgroundColor: 'rgba(0, 255, 157, 0.1)',
+                borderWidth: 2,
+                tension: 0.4, 
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false, 
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { color: '#333' } },
+                x: { grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
         // Бұл скрипт секунд сайын серверден мәлімет алып отырады
         async function updateStats() {
             try {
@@ -150,6 +185,10 @@
                     coresContainer.innerHTML += coreHTML;
                 });
 
+                       // Графикті жаңарту
+                cpuChart.data.datasets[0].data.push(data.cpu); 
+                cpuChart.data.datasets[0].data.shift();        
+                cpuChart.update();
             } catch (error) {
                 console.error('Error fetching stats:', error);
             }
