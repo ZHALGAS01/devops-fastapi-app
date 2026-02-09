@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  # 1. Сенің Python App (Ескі)
+  # 1. App (Сіздің Python сайт)
   monitoring-dashboard:
     build: .
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - .:/app  # Кодты тікелей оқу үшін
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
@@ -15,13 +15,11 @@ services:
     depends_on:
       - redis
 
-  # 2. Redis (Ескі)
+  # 2. Redis
   redis:
     image: "redis:alpine"
 
-  # --- ЖАҢА МОНИТОРИНГ БӨЛІГІ ---
-
-  # 3. Node Exporter (Агент - Сервердің жағдайын біледі)
+  # 3. Node Exporter
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
@@ -38,24 +36,27 @@ services:
     ports:
       - "9100:9100"
 
-  # 4. Prometheus (База - Деректерді жинайды)
+  # 4. Prometheus (Мәліметтер базасы)
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data/prometheus:/prometheus  # <--- ВАЖНО: Деректер осында сақталады
     ports:
       - "9090:9090"
     depends_on:
       - node-exporter
 
-  # 5. Grafana (Экран - График сызады)
+  # 5. Grafana (Графиктер мен Парольдер)
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
     ports:
       - "3000:3000"
+    volumes:
+      - ./data/grafana:/var/lib/grafana # <--- ВАЖНО: Пароль мен Дашборд осында
     depends_on:
       - prometheus
