@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 60s # Әр 60 секунд сайын тексеріп тұр
+
+scrape_configs:
+  - job_name: 'node_exporter_metrics'
+    static_configs:
+      - targets: ['node-exporter:9100'] # Біздің агентті тыңдайды
